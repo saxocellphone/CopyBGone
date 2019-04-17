@@ -67,8 +67,8 @@ int fingerprints_add(table_t* table, unsigned int hash, location_t location) {
 unsigned int hash_it(unsigned int x) {
     //https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key/12996028
     //This is apparently good for 32-bit numbers, moding it by SIZE to ensure valid index
-    x = ((x >> 16) ^ x) * 0x45d9f3b % SIZE;
-    x = ((x >> 16) ^ x) * 0x45d9f3b % SIZE;
-    x = (x >> 16) ^ x;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = (x >> 16) ^ x % SIZE;
     return x;
 }
