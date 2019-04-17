@@ -4,7 +4,17 @@
 #include <stdlib.h>
 
 #include "types.h"
-#define SIZE 5000
+//Hash type for k-grams
+typedef unsigned int hash_t;
+//Hash type for buckets in the table
+typedef unsigned int hash_hash_t;
+//The text position of a particular hash
+typedef long position_t;
+//the location (including the source file) of a k-gram hash
+typedef struct _location_t {
+    position_t pos;
+    char * source_file;
+} location_t;
 
 //Storing the list of locations within the node
 typedef struct _location_node_t {
@@ -26,6 +36,7 @@ typedef struct _node_t {
     struct _node_t*  next;
 } node_t;
 
+//Type of the fingerprint table
 typedef struct _table_t {
     node_t**      buckets;
     int*          size;
