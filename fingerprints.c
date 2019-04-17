@@ -1,7 +1,8 @@
 #include "fingerprints.h"
 
-void fingerprints_create(table_t* table) {
-    table->buckets = (node_t**) calloc(SIZE, sizeof(node_t*));
+void fingerprints_create(table_t* table, int size) {
+    table->buckets = (node_t**) calloc(size, sizeof(node_t*));
+    *(table->size) = size;
 }
 /**
  * Gets a linked list of all the locations of a fingerprint
@@ -9,7 +10,7 @@ void fingerprints_create(table_t* table) {
  * Returns 0 if fingerprint isn't found, returns 1 if it is found.
  * */
 int fingerprints_get(table_t* table, unsigned int hash, location_list_t* locations_list) {
-    unsigned int bucket_id = hash_it(hash);
+    unsigned int bucket_id = hash_it(hash, *(table->size));
     node_t* curr = table->buckets[bucket_id];
     while(curr){
         if(hash == curr->hash){
@@ -27,7 +28,7 @@ int fingerprints_get(table_t* table, unsigned int hash, location_list_t* locatio
  * Returns 0 if it is a new fingerprint, returns 1 if it is an existing fingerprint.
  * */
 int fingerprints_add(table_t* table, unsigned int hash, location_t location) {
-    unsigned int bucket_id = hash_it(hash);
+    unsigned int bucket_id = hash_it(hash, *(table->size));
     location_list_t* locations_list;
     if(fingerprints_get(table, hash, locations_list) == 1){
         location_node_t* new_location = (location_node_t*) malloc(sizeof(location_node_t));
@@ -64,11 +65,11 @@ int fingerprints_add(table_t* table, unsigned int hash, location_t location) {
     }
 }
 
-unsigned int hash_it(unsigned int x) {
+unsigned int hash_it(unsigned int x, int size) {
     //https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key/12996028
     //This is apparently good for 32-bit numbers, moding it by SIZE to ensure valid index
     x = ((x >> 16) ^ x) * 0x45d9f3b;
     x = ((x >> 16) ^ x) * 0x45d9f3b;
-    x = (x >> 16) ^ x % SIZE;
+    x = (x >> 16) ^ x % size;
     return x;
 }
