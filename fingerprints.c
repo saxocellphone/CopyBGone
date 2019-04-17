@@ -44,7 +44,7 @@ int fingerprints_add(table_t* table, unsigned int hash) {
         new_node->hash = hash;
         locations_list = (location_list_t*) malloc(sizeof(location_list_t));
         locations_list->size = (int*) calloc(1, sizeof(int));
-        new_node->locs = (location_list_t*) malloc(sizeof(struct _location_list_t));
+        new_node->locs = locations_list;
         node_t* curr = table->buckets[bucket_id];
         while(curr){
             //Doing loop for node because chance of collision is relatively small
