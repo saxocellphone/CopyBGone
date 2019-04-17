@@ -1,7 +1,7 @@
 #include "fingerprints.h"
 
 void fingerprints_create(table_t* table) {
-    table->buckets = (node_t*) malloc(SIZE * sizeof(struct _node_t));
+    table->buckets = (node_t**) malloc(SIZE * sizeof(node_t*));
 }
 /**
  * Gets a linked list of all the locations of a fingerprint
@@ -16,6 +16,7 @@ int fingerprints_get(table_t* table, unsigned int hash, location_list_t* locatio
             locations_list = curr->locs;
             return 1;
         }
+        curr = curr->next;
     }
     return 0;
 }
@@ -43,7 +44,7 @@ int fingerprints_add(table_t* table, unsigned int hash) {
         new_node->hash = hash;
         locations_list = (location_list_t*) malloc(sizeof(location_list_t));
         locations_list->size = (int*) calloc(1, sizeof(int));
-        new_node->locs = (location_t*) malloc(sizeof(struct _location_t));
+        new_node->locs = (location_list_t*) malloc(sizeof(struct _location_list_t));
         node_t* curr = table->buckets[bucket_id];
         while(curr){
             //Doing loop for node because chance of collision is relatively small
