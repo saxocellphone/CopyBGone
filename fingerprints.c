@@ -26,13 +26,14 @@ int fingerprints_get(table_t* table, unsigned int hash, location_list_t* locatio
  * 
  * Returns 0 if it is a new fingerprint, returns 1 if it is an existing fingerprint.
  * */
-int fingerprints_add(table_t* table, unsigned int hash) {
+int fingerprints_add(table_t* table, unsigned int hash, location_t location) {
     unsigned int bucket_id = hash_it(hash);
     location_list_t* locations_list;
     if(fingerprints_get(table, hash, locations_list) == 1){
         location_node_t* new_location = (location_node_t*) malloc(sizeof(location_node_t));
+        new_location->location = location;
         if(locations_list->size == 0){
-            locations_list->head = locations_list->ptr = locations_list->tail = new_location;
+            locations_list->head = locations_list->tail = new_location;
         } else {
             locations_list->tail->next = new_location;
             locations_list->tail = new_location;
@@ -44,6 +45,10 @@ int fingerprints_add(table_t* table, unsigned int hash) {
         new_node->hash = hash;
         locations_list = (location_list_t*) malloc(sizeof(location_list_t));
         locations_list->size = (int*) calloc(1, sizeof(int));
+        location_node_t* new_location = (location_node_t*) malloc(sizeof(location_node_t));
+        new_location->location = location;
+        locations_list->head = new_location;
+        locations_list->tail = new_location;
         new_node->locs = locations_list;
         node_t* curr = table->buckets[bucket_id];
         while(curr){

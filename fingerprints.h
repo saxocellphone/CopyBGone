@@ -16,13 +16,12 @@ typedef struct _location_list_t {
     int*             size;
     location_node_t* head;
     location_node_t* tail;
-    location_node_t*  ptr;
 } location_list_t;
 
 typedef struct _node_t {
     hash_t           hash;
     location_list_t* locs;
-    struct _node_t*          next;
+    struct _node_t*  next;
 } node_t;
 
 typedef struct _table_t {
@@ -31,7 +30,7 @@ typedef struct _table_t {
 
 void fingerprints_create(table_t* table);
 
-int fingerprints_add(table_t* table, unsigned int hash);
+int fingerprints_add(table_t* table, unsigned int hash, location_t location);
 
 int fingerprints_get(table_t* table, unsigned int hash, location_list_t* locations);
 
