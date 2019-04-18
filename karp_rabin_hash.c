@@ -8,11 +8,13 @@ hash_t create_generator(hash_gen_t** generator, int kgram_len, int prime, char* 
     int h = 1;
     (*generator)->prime = prime;
     (*generator)->kgram_len = kgram_len;
+    //Loop for calculating h, the common base-factor
     for(int i = 0; i < kgram_len - 1; i++){
         h = (h * ALPHA) % prime;
     }
     (*generator)->h = h;
     hash_t first_hash = 0;
+    //Generating the first k-gram
     for(int i = 0; i < kgram_len; i++){
         first_hash = (ALPHA * first_hash + first_kgram[i]) % prime;
     }
@@ -24,6 +26,7 @@ hash_t create_generator(hash_gen_t** generator, int kgram_len, int prime, char* 
  * Generate the next hash for k-gram based on the previous hash (BLOCKCHAIN?)
  * */
 hash_t generate_next_hash(hash_gen_t* generator, char* new_kgram){
+    //Using the current k-gram hash to generate the next k-gram hash
     hash_t new_hash = (ALPHA * (generator->curr_hash - new_kgram[0] * generator->h) + 
                       new_kgram[generator->kgram_len-1]) % generator->prime;
     return new_hash;
