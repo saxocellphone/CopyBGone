@@ -3,7 +3,6 @@
 
 #include <stdlib.h>
 
-#include "types.h"
 //Hash type for k-grams
 typedef unsigned int hash_t;
 //Hash type for buckets in the table

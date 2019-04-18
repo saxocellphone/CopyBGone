@@ -1,6 +1,7 @@
 #include "fingerprints.h"
 
 void fingerprints_create(table_t* table, int size) {
+    //TODO: Make the first argument of this function take a double pointer to make sure it's properly created.
     table->buckets = (node_t**) calloc(size, sizeof(node_t*));
     *(table->size) = size;
 }
