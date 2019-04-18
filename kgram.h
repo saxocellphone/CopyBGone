@@ -1,10 +1,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+
+/**
+ * Kgram generator generates k-gram with size k from a given text.
+ * To get the next k-gram, just simply call generate_next_kgram.
+ * */
+
+//Kgram type with location information.
 typedef struct _kgram_t{
     char* kgram;
     int location;
 } kgram_t;
+//The kgram generator type.
 typedef struct _kgram_gen_t {
     char* base_text;
     int position;
