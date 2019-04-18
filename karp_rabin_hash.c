@@ -3,7 +3,7 @@
 /**
  * Creates a generator of hashes for k-grams. 
  * */
-hash_t create_generator(hash_gen_t** generator, int kgram_len, int prime, char* first_kgram){
+hash_t create_hash_generator(hash_gen_t** generator, int kgram_len, int prime, char* first_kgram){
     *generator = (hash_gen_t*) malloc(sizeof(struct _hash_gen_t));
     int h = 1;
     (*generator)->prime = prime;
