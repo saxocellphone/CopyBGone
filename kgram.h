@@ -19,5 +19,5 @@ typedef struct _kgram_gen_t {
     int k;
 } kgram_gen_t;
 
-void create_kgram_generator(kgram_gen_t** generator, char* base_text, int k);
+void create_kgram_generator(kgram_gen_t** generator, char* base_text, int base_text_len, int k);
 void generate_next_kgram(kgram_gen_t* generator, kgram_t** kgram_buffer);
