@@ -3,8 +3,6 @@
 
 #include <stdlib.h>
 
-//Hash type for k-grams
-typedef unsigned int hash_t;
 //Hash type for buckets in the table
 typedef unsigned int hash_hash_t;
 //The text position of a particular hash
@@ -14,6 +12,13 @@ typedef struct _location_t {
     position_t pos;
     char * source_file;
 } location_t;
+
+//Hash type for k-grams
+typedef unsigned int hash_t;
+typedef struct _fingerprint_t {
+    hash_t hash;
+    location_t location;
+} fingerprint_t;
 
 //Storing the list of locations within the node
 typedef struct _location_node_t {
