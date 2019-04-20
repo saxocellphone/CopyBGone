@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include<string.h>
 #include<mpi.h>
+#include<pthread.h>
 
 #include "fingerprints.h"
 #include "karp_rabin_hash.h"
@@ -15,12 +16,24 @@ char** file_names;
 //Global vars
 int chars_per_chunk;
 int next_buffer_count; //This is the count for the carry-over from the next rank
+//Thread stuff
+int num_threads = 4;
 
 typedef struct _chunk_data_t {
     char* buffer;
     //Might delete this later
     char* next_chunk_buffer;
 } chunk_data_t;
+
+typedef struct {
+    int thread_num;
+    char* text;
+    fingerprint_t* fingerprints;
+    long start;
+    long finish;
+} thread_args;
+
+void* generate_fingerprint(void* arg);
 
 int main(int argc, char** argv){
     MPI_Init( &argc, &argv);
@@ -79,18 +92,50 @@ int main(int argc, char** argv){
         MPI_Isend(local_chunk->buffer, next_buffer_count, MPI_CHAR, mpi_myrank - 1, 0, MPI_COMM_WORLD, &send_req);
     }
 
-    printf("rank: %d, chunk: %s, next: %s\n", mpi_myrank, local_chunk->buffer, local_chunk->next_chunk_buffer);
-    kgram_gen_t* kgram_gen;
-    create_kgram_generator(&kgram_gen, "test_original.txt", local_chunk->buffer, chars_per_chunk, k_gram_size);
-    kgram_t* first_kgram;
-    generate_next_kgram(kgram_gen, &first_kgram);
-    hash_gen_t* hash_gen;
-    create_hash_generator(&hash_gen, k_gram_size, 105943, first_kgram->kgram);
+    // printf("rank: %d, chunk: %s, next: %s\n", mpi_myrank, local_chunk->buffer, local_chunk->next_chunk_buffer);
 
     fingerprint_t* fingerprints = (fingerprint_t*) malloc(chars_per_chunk * sizeof(struct _fingerprint_t));
 
     //Maybe make this parallel???
-    for(int i = 0; i < chars_per_chunk; i++){
+    pthread_t threads[num_threads];
+    long chars_per_thread = chars_per_chunk / num_threads;
+    for(int i = 0; i < num_threads; i++){
+        thread_args* arg = (thread_args*) malloc(sizeof(thread_args));
+        arg->thread_num = i;
+        arg->text = local_chunk->buffer;
+        arg->fingerprints = fingerprints;
+        arg->start = i * chars_per_thread;
+        arg->finish = (i+1) * chars_per_thread;
+        pthread_create(&threads[i], NULL, generate_fingerprint, (void*) arg);
+    }
+
+    for (int j = 0; j < num_threads; j++) {
+        void * ret;
+        pthread_join(threads[j], &ret);
+    }
+    if(mpi_myrank == 1){
+        for(int i = 0; i < chars_per_chunk; i++){
+            printf("%d\n", fingerprints[i].hash);
+        }
+    }
+    free(local_chunk->buffer);
+    free(local_chunk->next_chunk_buffer);
+    free(local_chunk);
+    free(file_names);
+    MPI_Barrier( MPI_COMM_WORLD );
+    MPI_Finalize();
+}
+
+void* generate_fingerprint(void* arg){
+    kgram_gen_t* kgram_gen;
+    create_kgram_generator(&kgram_gen, "test_original.txt", ((thread_args*) arg)->text, chars_per_chunk, k_gram_size);
+    kgram_t* first_kgram;
+    generate_next_kgram(kgram_gen, &first_kgram);
+    hash_gen_t* hash_gen;
+    create_hash_generator(&hash_gen, k_gram_size, 105943, first_kgram->kgram);
+    char* text = ((thread_args*) arg)->text;
+    int thread_num = ((thread_args*) arg)->thread_num;
+    for(long i = ((thread_args*) arg)->start; i < ((thread_args*) arg)->finish; i++){
         kgram_t* new_kgram;
         int status = generate_next_kgram(kgram_gen, &new_kgram);
         if(status == 0){
@@ -99,18 +144,11 @@ int main(int argc, char** argv){
             fingerprint_t fingerprint;
             fingerprint.hash = new_hash;
             fingerprint.location = *new_kgram->location;
-            fingerprints[i] = fingerprint;
+            ((thread_args*) arg)->fingerprints[i] = fingerprint;
         } else {
             break;
         }
     }
-
     free(kgram_gen);
     free(hash_gen);
-    free(local_chunk->buffer);
-    free(local_chunk->next_chunk_buffer);
-    free(local_chunk);
-    free(file_names);
-    MPI_Barrier( MPI_COMM_WORLD );
-    MPI_Finalize();
 }
