@@ -71,12 +71,14 @@ int main(int argc, char** argv){
     //TODO: broadcast file names to all ranks
     chars_per_chunk = filesize / mpi_commsize;
     next_buffer_count = k_gram_size - 1;
+    //Allocate the local chunk of data
     chunk_data_t* local_chunk = (chunk_data_t*) malloc(sizeof(struct _chunk_data_t));
     local_chunk->buffer = (char*) malloc(sizeof(char) * chars_per_chunk + next_buffer_count);
     local_chunk->next_chunk_buffer = (char*) malloc(sizeof(char) * next_buffer_count);
     MPI_File * fh = malloc(sizeof * fh);
+    //Opens file, right now it's only doing one file.
     MPI_File_open(MPI_COMM_WORLD, "test_original.txt", MPI_MODE_RDONLY, MPI_INFO_NULL, fh);
-
+    //Read file at the correct location.
     MPI_File_read_at(*fh, mpi_myrank * chars_per_chunk, local_chunk->buffer, filesize / mpi_commsize,
                   MPI_CHAR, MPI_STATUS_IGNORE);
 
@@ -92,14 +94,12 @@ int main(int argc, char** argv){
         MPI_Isend(local_chunk->buffer, next_buffer_count, MPI_CHAR, mpi_myrank - 1, 0, MPI_COMM_WORLD, &send_req);
     }
 
-    // printf("rank: %d, chunk: %s, next: %s\n", mpi_myrank, local_chunk->buffer, local_chunk->next_chunk_buffer);
-
     fingerprint_t* fingerprints = (fingerprint_t*) malloc(chars_per_chunk * sizeof(struct _fingerprint_t));
 
-    //Maybe make this parallel???
     pthread_t threads[num_threads];
     long chars_per_thread = chars_per_chunk / num_threads;
     for(int i = 0; i < num_threads; i++){
+        //All the args to path to pthread are in this struct
         thread_args* arg = (thread_args*) malloc(sizeof(thread_args));
         arg->thread_num = i;
         arg->text = local_chunk->buffer;
@@ -113,6 +113,7 @@ int main(int argc, char** argv){
         void * ret;
         pthread_join(threads[j], &ret);
     }
+
     if(mpi_myrank == 1){
         for(int i = 0; i < chars_per_chunk; i++){
             printf("%d\n", fingerprints[i].hash);
