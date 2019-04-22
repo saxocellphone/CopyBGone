@@ -3,19 +3,19 @@
 /**
  * Creates a generator of hashes for k-grams. 
  * */
-hash_t create_hash_generator(hash_gen_t** generator, int kgram_len, long prime, char* first_kgram){
+hash_t create_hash_generator(hash_gen_t** generator, int k, long prime, char* first_kgram){
     *generator = (hash_gen_t*) malloc(sizeof(struct _hash_gen_t));
     int h = 1;
     (*generator)->prime = prime;
-    (*generator)->kgram_len = kgram_len;
+    (*generator)->kgram_len = k;
     //Loop for calculating h, the common base-factor
-    for(int i = 0; i < kgram_len - 1; i++){
+    for(int i = 0; i < k - 1; i++){
         h = (h * ALPHA) % prime;
     }
     (*generator)->h = h;
     hash_t first_hash = 0;
     //Generating the first k-gram
-    for(int i = 0; i < kgram_len; i++){
+    for(int i = 0; i < k; i++){
         first_hash = (ALPHA * first_hash + first_kgram[i]) % prime;
     }
     (*generator)->curr_hash = first_hash;

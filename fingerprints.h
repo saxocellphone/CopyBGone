@@ -2,6 +2,7 @@
 #define GUARD_DATABASE_H
 
 #include <stdlib.h>
+#include <stdio.h>
 
 //Hash type for buckets in the table
 typedef unsigned int hash_hash_t;
@@ -28,7 +29,7 @@ typedef struct _location_node_t {
 
 //Linked list for the location nodes
 typedef struct _location_list_t {
-    int*             size;
+    int              size;
     location_node_t* head;
     location_node_t* tail;
 } location_list_t;
@@ -43,14 +44,14 @@ typedef struct _node_t {
 //Type of the fingerprint table
 typedef struct _table_t {
     node_t**      buckets;
-    int*          size;
+    int           size;
 } table_t;
 
-void fingerprints_create(table_t* table, int size);
+void fingerprints_create(table_t** table, int size);
 
 int fingerprints_add(table_t* table, unsigned int hash, location_t location);
 
-int fingerprints_get(table_t* table, unsigned int hash, location_list_t* locations);
+int fingerprints_get(table_t* table, unsigned int hash, location_list_t** locations);
 
 unsigned int hash_it(unsigned int x, int size);
 

@@ -17,10 +17,13 @@ typedef struct _kgram_t{
 typedef struct _kgram_gen_t {
     char* source_file;
     char* base_text;
-    int position;
+    long position;
+    //The position in the sub-chunk data
+    long start_position;
+    long end_position;
     int k;
 } kgram_gen_t;
 
-void create_kgram_generator(kgram_gen_t** generator, char* source_file, char* base_text, int base_text_len, int k);
+void create_kgram_generator(kgram_gen_t** generator, char* source_file, char* base_text, long start_position, long end_position, int k);
 
 int generate_next_kgram(kgram_gen_t* generator, kgram_t** kgram_buffer);

@@ -1,13 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include<string.h>
-#include<mpi.h>
-#include<pthread.h>
+#include <string.h>
+#include <mpi.h>
+#include <pthread.h>
+#include <limits.h>
 
 #include "fingerprints.h"
 #include "karp_rabin_hash.h"
 #include "kgram.h"
 
+#define PRIME 105943
 //MPI Inits
 int mpi_commsize, mpi_myrank;
 //Arg inits
@@ -94,7 +96,7 @@ int main(int argc, char** argv){
         MPI_Isend(local_chunk->buffer, next_buffer_count, MPI_CHAR, mpi_myrank - 1, 0, MPI_COMM_WORLD, &send_req);
     }
 
-    fingerprint_t* fingerprints = (fingerprint_t*) malloc(chars_per_chunk * sizeof(struct _fingerprint_t));
+    fingerprint_t* fingerprints = (fingerprint_t*) calloc(chars_per_chunk, sizeof(struct _fingerprint_t));
 
     pthread_t threads[num_threads];
     long chars_per_thread = chars_per_chunk / num_threads;
@@ -114,11 +116,67 @@ int main(int argc, char** argv){
         pthread_join(threads[j], &ret);
     }
 
-    if(mpi_myrank == 1){
-        for(int i = 0; i < chars_per_chunk; i++){
-            printf("%d\n", fingerprints[i].hash);
+    // for(int i = 0; i < chars_per_chunk; i++){
+    //     printf("%d ", fingerprints[i].hash);
+    //     printf("i: %d, Hash: %d, Position: %ld\n", i, fingerprints[i].hash, fingerprints[i].location.pos);
+    // }
+
+    table_t* fingerprints_db;
+    fingerprints_create(&fingerprints_db, PRIME);
+    int r = 0;
+    int min = 0;
+    fingerprint_t* h[window_size];
+    int counter = 0;
+    int window_index = 0;
+    // Initialize the window
+    for(int i = 0; i < window_size; i++){
+        fingerprint_t* init = (fingerprint_t*) malloc(sizeof(struct _fingerprint_t));
+        init->hash = INT_MAX;
+        h[i] = init;
+    }
+    for(int i = 0; i < chars_per_chunk; i++){
+        if(fingerprints[i].hash == 0){
+            continue;
+        }
+        r = (r + 1) % window_size;
+        h[r] = &fingerprints[i];
+        // printf("i: %d, Min: %d, R: %d, minHash: %d, rHash: %d\n", i, min, r, h[min]->hash, h[r]->hash);
+
+        if(min == r){
+            min = 0;
+            for(int j = 0; j < window_size; j++){
+                if(h[j]->hash < h[min]->hash){
+                    min = j;
+                }
+            }
+            // This is the for loop in the paper, but it doesn't work for some reason
+            // for(int j = (r-1) % window_size; j != r; j = (j-1+window_size) % window_size){
+            //     if(h[j]->hash < h[min]->hash){
+            //         min == j;
+            //     }
+            // }
+            printf("Out of window: Hash: %d, Position: %ld, Min: %d\n", h[min]->hash, h[min]->location.pos, min);
+            fingerprints_add(fingerprints_db, h[min]->hash, h[min]->location);
+        } else {
+            if(h[r]->hash <= h[min]->hash) {
+                // printf("In window: Hash: %d, Position: %ld\n", h[min]->hash, h[min]->location.pos);
+                min = r;
+                printf("In window: Hash: %d, Position: %ld, Min: %d\n", h[min]->hash, h[min]->location.pos, min);
+                fingerprints_add(fingerprints_db, h[min]->hash, h[min]->location);
+            }
         }
     }
+    location_list_t* locations_found;
+    int status = fingerprints_get(fingerprints_db, 44899, &locations_found);
+    printf("Status: %d\n", status);
+    printf("Found hash 44899 at %d locations: \n", locations_found->size);
+    location_node_t* curr = locations_found->head;
+    for(int i = 0; i < locations_found->size; i++){
+        printf("Position: %ld, Src: %s\n", curr->location.pos, curr->location.source_file);
+        curr = curr->next;
+    }
+    free(fingerprints_db->buckets);
+    free(fingerprints_db);
     free(local_chunk->buffer);
     free(local_chunk->next_chunk_buffer);
     free(local_chunk);
@@ -128,15 +186,27 @@ int main(int argc, char** argv){
 }
 
 void* generate_fingerprint(void* arg){
+    // printf("Start: %ld, End: %ld\n", ((thread_args*) arg)->start, ((thread_args*) arg)->finish); 
+    
+    //right now the first k-gram and hash is being calculated seperately. Might refactor this
     kgram_gen_t* kgram_gen;
-    create_kgram_generator(&kgram_gen, "test_original.txt", ((thread_args*) arg)->text, chars_per_chunk, k_gram_size);
+    create_kgram_generator(&kgram_gen, "test_original.txt", ((thread_args*) arg)->text, ((thread_args*) arg)->start, ((thread_args*) arg)->finish, k_gram_size);
     kgram_t* first_kgram;
     generate_next_kgram(kgram_gen, &first_kgram);
     hash_gen_t* hash_gen;
-    create_hash_generator(&hash_gen, k_gram_size, 105943, first_kgram->kgram);
+    // printf("thread: %d, kgram: %s, location: %ld\n", ((thread_args*) arg)->thread_num, first_kgram->kgram, first_kgram->location->pos);
+    create_hash_generator(&hash_gen, k_gram_size, PRIME, first_kgram->kgram);
+    hash_t first_hash = generate_next_hash(hash_gen, first_kgram->kgram);
+    free(first_kgram);
+    fingerprint_t fingerprint;
+    fingerprint.hash = first_hash;
+    fingerprint.location = *first_kgram->location;
+    ((thread_args*) arg)->fingerprints[((thread_args*) arg)->start] = fingerprint;
+    //End of the first k-gram and first hash generation.
+
     char* text = ((thread_args*) arg)->text;
     int thread_num = ((thread_args*) arg)->thread_num;
-    for(long i = ((thread_args*) arg)->start; i < ((thread_args*) arg)->finish; i++){
+    for(long i = ((thread_args*) arg)->start + 1; i < ((thread_args*) arg)->finish; i++){
         kgram_t* new_kgram;
         int status = generate_next_kgram(kgram_gen, &new_kgram);
         if(status == 0){
@@ -146,8 +216,6 @@ void* generate_fingerprint(void* arg){
             fingerprint.hash = new_hash;
             fingerprint.location = *new_kgram->location;
             ((thread_args*) arg)->fingerprints[i] = fingerprint;
-        } else {
-            break;
         }
     }
     free(kgram_gen);

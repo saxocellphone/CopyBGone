@@ -14,6 +14,6 @@ typedef struct _hash_gen_t {
     hash_t curr_hash;
 } hash_gen_t;
 
-hash_t create_hash_generator(hash_gen_t** generator, int kgram_len, long prime, char* first_kgram);
+hash_t create_hash_generator(hash_gen_t** generator, int k, long prime, char* first_kgram);
 
 hash_t generate_next_hash(hash_gen_t* generator, char* new_kgram);
