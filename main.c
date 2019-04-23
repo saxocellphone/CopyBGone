@@ -78,7 +78,7 @@ int main(int argc, char** argv){
     //Allocate the local chunk of data
     chunk_data_t* local_chunk = (chunk_data_t*) malloc(sizeof(struct _chunk_data_t));
     local_chunk->buffer = (char*) malloc(sizeof(char) * chars_per_chunk + next_buffer_count);
-    local_chunk->next_chunk_buffer = (char*) malloc(sizeof(char) * next_buffer_count);
+    // local_chunk->next_chunk_buffer = (char*) malloc(sizeof(char) * next_buffer_count);
     MPI_File * fh = malloc(sizeof * fh);
     //Opens file, right now it's only doing one file.
     MPI_File_open(MPI_COMM_WORLD, "test_original.txt", MPI_MODE_RDONLY, MPI_INFO_NULL, fh);
@@ -87,20 +87,15 @@ int main(int argc, char** argv){
                   MPI_CHAR, MPI_STATUS_IGNORE);
 
     MPI_Request send_req, recv_req;
-
     //Sends the nessesary k-gram from next rank to previous
     if(mpi_myrank != mpi_commsize - 1){
         // all but last rank will receive from next rank
-        MPI_Irecv(local_chunk->next_chunk_buffer, next_buffer_count, MPI_CHAR, mpi_myrank + 1, 0, MPI_COMM_WORLD, &recv_req);
-        MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
-        //Concat the two buffers 
-        strcat(local_chunk->buffer, local_chunk->next_chunk_buffer);
-    }
+        MPI_Irecv(&local_chunk->buffer[chars_per_chunk], next_buffer_count, MPI_CHAR, mpi_myrank + 1, 0, MPI_COMM_WORLD, &recv_req);
+        MPI_Wait(&recv_req, MPI_STATUS_IGNORE);    }
     if(mpi_myrank != 0){
         // all but first rank will send to next rank
         MPI_Isend(local_chunk->buffer, next_buffer_count, MPI_CHAR, mpi_myrank - 1, 0, MPI_COMM_WORLD, &send_req);
     }
-
     // allocate space for all candidate fingerprints
     fingerprint_t* fingerprints = (fingerprint_t*) calloc(chars_per_chunk, sizeof(struct _fingerprint_t));
 
@@ -160,7 +155,7 @@ int main(int argc, char** argv){
     free(fingerprints_db->buckets);
     free(fingerprints_db);
     free(local_chunk->buffer);
-    free(local_chunk->next_chunk_buffer);
+    // free(local_chunk->next_chunk_buffer);
     free(local_chunk);
     free(file_names);
     MPI_Barrier( MPI_COMM_WORLD );
@@ -196,13 +191,13 @@ void* winnow(void* arg){
                     min == j;
                 }
             }
-            printf("Out of window: Hash: %d, Position: %ld, Min: %d\n", h[min].hash, h[min].location.pos, min);
+            // printf("Out of window: Hash: %d, Position: %ld, Min: %d\n", h[min].hash, h[min].location.pos, min);
             fingerprints_add(((thread_args*) arg)->fingerprints_db, h[min].hash, h[min].location);
         } else {
             if(h[r].hash <= h[min].hash) {
                 // printf("In window: Hash: %d, Position: %ld\n", h[min].hash, h[min].location.pos);
                 min = r;
-                printf("In window: Hash: %d, Position: %ld, Min: %d\n", h[min].hash, h[min].location.pos, min);
+                // printf("In window: Hash: %d, Position: %ld, Min: %d\n", h[min].hash, h[min].location.pos, min);
                 fingerprints_add(((thread_args*) arg)->fingerprints_db, h[min].hash, h[min].location);
             }
         }
