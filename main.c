@@ -87,15 +87,18 @@ int main(int argc, char** argv){
     MPI_Request send_req, recv_req;
 
     if(mpi_myrank != mpi_commsize - 1){
+        // all but last rank will receive from next rank
         MPI_Irecv(local_chunk->next_chunk_buffer, next_buffer_count, MPI_CHAR, mpi_myrank + 1, 0, MPI_COMM_WORLD, &recv_req);
         MPI_Wait(&recv_req, MPI_STATUS_IGNORE);
         //Concat the two buffers 
         strcat(local_chunk->buffer, local_chunk->next_chunk_buffer);
     }
     if(mpi_myrank != 0){
+        // all but first rank will send to next rank
         MPI_Isend(local_chunk->buffer, next_buffer_count, MPI_CHAR, mpi_myrank - 1, 0, MPI_COMM_WORLD, &send_req);
     }
 
+    // allocate space for all candidate fingerprints
     fingerprint_t* fingerprints = (fingerprint_t*) calloc(chars_per_chunk, sizeof(struct _fingerprint_t));
 
     pthread_t threads[num_threads];
@@ -121,48 +124,46 @@ int main(int argc, char** argv){
     //     printf("i: %d, Hash: %d, Position: %ld\n", i, fingerprints[i].hash, fingerprints[i].location.pos);
     // }
 
+    // initialize fingerprint database
     table_t* fingerprints_db;
     fingerprints_create(&fingerprints_db, PRIME);
-    int r = 0;
-    int min = 0;
-    fingerprint_t* h[window_size];
-    int counter = 0;
-    int window_index = 0;
+
+    int r = 0; // index to window
+    int min = 0; // index of minimum element in window
+    fingerprint_t h[window_size]; // rolling window of hashes
     // Initialize the window
     for(int i = 0; i < window_size; i++){
-        fingerprint_t* init = (fingerprint_t*) malloc(sizeof(struct _fingerprint_t));
-        init->hash = INT_MAX;
-        h[i] = init;
+        h[i].hash = INT_MAX;
     }
     for(int i = 0; i < chars_per_chunk; i++){
         if(fingerprints[i].hash == 0){
             continue;
         }
         r = (r + 1) % window_size;
-        h[r] = &fingerprints[i];
-        // printf("i: %d, Min: %d, R: %d, minHash: %d, rHash: %d\n", i, min, r, h[min]->hash, h[r]->hash);
+        h[r] = fingerprints[i];
+        // printf("i: %d, Min: %d, R: %d, minHash: %d, rHash: %d\n", i, min, r, h[min].hash, h[r].hash);
 
         if(min == r){
             min = 0;
             for(int j = 0; j < window_size; j++){
-                if(h[j]->hash < h[min]->hash){
+                if(h[j].hash < h[min].hash){
                     min = j;
                 }
             }
             // This is the for loop in the paper, but it doesn't work for some reason
             // for(int j = (r-1) % window_size; j != r; j = (j-1+window_size) % window_size){
-            //     if(h[j]->hash < h[min]->hash){
+            //     if(h[j].hash < h[min].hash){
             //         min == j;
             //     }
             // }
-            printf("Out of window: Hash: %d, Position: %ld, Min: %d\n", h[min]->hash, h[min]->location.pos, min);
-            fingerprints_add(fingerprints_db, h[min]->hash, h[min]->location);
+            printf("Out of window: Hash: %d, Position: %ld, Min: %d\n", h[min].hash, h[min].location.pos, min);
+            fingerprints_add(fingerprints_db, h[min].hash, h[min].location);
         } else {
-            if(h[r]->hash <= h[min]->hash) {
-                // printf("In window: Hash: %d, Position: %ld\n", h[min]->hash, h[min]->location.pos);
+            if(h[r].hash <= h[min].hash) {
+                // printf("In window: Hash: %d, Position: %ld\n", h[min].hash, h[min].location.pos);
                 min = r;
-                printf("In window: Hash: %d, Position: %ld, Min: %d\n", h[min]->hash, h[min]->location.pos, min);
-                fingerprints_add(fingerprints_db, h[min]->hash, h[min]->location);
+                printf("In window: Hash: %d, Position: %ld, Min: %d\n", h[min].hash, h[min].location.pos, min);
+                fingerprints_add(fingerprints_db, h[min].hash, h[min].location);
             }
         }
     }
