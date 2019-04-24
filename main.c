@@ -144,6 +144,7 @@ int main(int argc, char** argv){
         // printf("i: %d, Min: %d, R: %d, minHash: %d, rHash: %d\n", i, min, r, h[min].hash, h[r].hash);
 
         if(min == r){
+            // iteration complete; reset hashes
             min = 0;
             for(int j = 0; j < window_size; j++){
                 if(h[j].hash < h[min].hash){
@@ -159,6 +160,7 @@ int main(int argc, char** argv){
             printf("Out of window: Hash: %d, Position: %ld, Min: %d\n", h[min].hash, h[min].location.pos, min);
             fingerprints_add(fingerprints_db, h[min].hash, h[min].location);
         } else {
+            // in middle of iteration; update minimum
             if(h[r].hash <= h[min].hash) {
                 // printf("In window: Hash: %d, Position: %ld\n", h[min].hash, h[min].location.pos);
                 min = r;
@@ -167,15 +169,22 @@ int main(int argc, char** argv){
             }
         }
     }
+    // find all locations corresponding to this hash
+    // locations_found must be a pointer to array because fingerprints_get will 
+    // set location of the array
     location_list_t* locations_found;
     int status = fingerprints_get(fingerprints_db, 44899, &locations_found);
     printf("Status: %d\n", status);
     printf("Found hash 44899 at %d locations: \n", locations_found->size);
+
+    // iterate through and print
     location_node_t* curr = locations_found->head;
     for(int i = 0; i < locations_found->size; i++){
         printf("Position: %ld, Src: %s\n", curr->location.pos, curr->location.source_file);
         curr = curr->next;
     }
+
+    // free memory and stop mpi
     free(fingerprints_db->buckets);
     free(fingerprints_db);
     free(local_chunk->buffer);
