@@ -11,8 +11,10 @@
 
 #define PRIME 105943
 #ifdef BGQ
+double g_processor_frequency = 1600000000.0; // processing speed for BG/Q
 #include<hwi/include/bqc/A2_inlines.h>
 #else
+double g_processor_frequency = 1.0;
 #define GetTimeBase MPI_Wtime            
 #endif
 //MPI Inits
@@ -24,7 +26,6 @@ char** file_names;
 int chars_per_chunk;
 int next_buffer_count; //This is the count for the carry-over from the next rank
 double g_time_in_secs = 0;
-double g_processor_frequency = 1600000000.0; // processing speed for BG/Q
 unsigned long long g_start_cycles=0;
 unsigned long long g_end_cycles=0;
 //Thread stuff
@@ -52,27 +53,36 @@ int main(int argc, char** argv){
     MPI_Init( &argc, &argv);
     MPI_Comm_size( MPI_COMM_WORLD, &mpi_commsize);
     MPI_Comm_rank( MPI_COMM_WORLD, &mpi_myrank);
-
-    for (int i = 1; i < 5; i++) {
+    // command line parsing
+    file_names = (char **) calloc(argc, sizeof(char*));
+    int num_files = 0;
+    for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--window") == 0 || strcmp(argv[i], "-w") == 0) {
             window_size = atoi(argv[i+1]);
-        }
+            ++i;
+            continue;
+        } 
         if (strcmp(argv[i], "--kgram") == 0 || strcmp(argv[i], "-k") == 0) {
             k_gram_size = atoi(argv[i+1]);
+            ++i;
+            continue;
         }
+        if (strcmp(argv[i], "--threads") == 0 || strcmp(argv[i], "-t") == 0) {
+            num_threads = atoi(argv[i+1]);
+            ++i;
+            continue;
+        }
+        file_names[num_files] = argv[i];
+        num_files++;
     }
-    file_names = (char**) malloc(sizeof(char*) * 50 * (argc - 4));
-    int num_files = argc - 5;
-    //Loop for filenames, starts at 5 because that's where the filename starts
-    for(int i = 0; i < num_files; i++){
-        file_names[i] = argv[i + 5];
-    }
-    
+    printf("k=%d, w=%d, threads=%d, num_files=%d\n", k_gram_size, window_size, num_threads, num_files);
+
     long int filesize;
     table_t* fingerprints_db; //Stores all winnowed fingerprints
     fingerprints_create(&fingerprints_db, PRIME);
     chunk_data_t* local_chunk = (chunk_data_t*) malloc(sizeof(struct _chunk_data_t)); //Allocate the local chunk of data
     for(int n = 0; n < num_files; n++){
+        printf("File %d, %s\n", n, file_names[n]);
         if(mpi_myrank == 0){
             FILE* fp = fopen(file_names[n], "r");
             fseek(fp, 0L, SEEK_END); 
@@ -131,7 +141,9 @@ int main(int argc, char** argv){
         }
         double end_time = GetTimeBase();
         double kgram_hash_time = end_time - start_time;
-        printf("kgram_hash_time: %lf\n", kgram_hash_time);
+        if (mpi_myrank) {
+            printf("kgram_hash_time: %lf\n", kgram_hash_time / g_processor_frequency);
+        }
         /****************************************************
          *  Multithreading for winnowing
          * **************************************************/
@@ -158,7 +170,9 @@ int main(int argc, char** argv){
         }
         end_time = GetTimeBase();
         double winnowing_time = end_time - start_time;
-        printf("winnow_time: %lf\n", winnowing_time);
+        if (mpi_myrank == 0) {
+            printf("winnow_time: %lf\n", winnowing_time / g_processor_frequency);
+        }
         /****************************************************
          * adding fingerprint to DB and querying across ranks
          * **************************************************/
@@ -223,7 +237,7 @@ void* winnow(void* arg){
             min = 0;
             for(int j = (r-1) % window_size; j != r; j = (j-1+window_size) % window_size){
                 if(h[j]->hash < h[min]->hash){
-                    min == j;
+                    min = j;
                 }
             }
             ((thread_args*) arg)->winnowed_fingerprints[i] = h[min];

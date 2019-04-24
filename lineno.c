@@ -56,7 +56,7 @@ size_t read_lineno(char * fd, position_t ** lineno) {
     return size;
 }
 
-size_t get_lineno(position_t * lineno, size_t len, position_t pos,
+void get_lineno(position_t * lineno, size_t len, position_t pos,
                   size_t * row, size_t * col) {
     size_t L = 0,
            R = len - 1,
