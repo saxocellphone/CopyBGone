@@ -56,18 +56,23 @@ size_t read_lineno(char * fd, position_t ** lineno) {
     return size;
 }
 
-size_t get_lineno(position_t * lineno, size_t len, position_t pos) {
+size_t get_lineno(position_t * lineno, size_t len, position_t pos,
+                  size_t * row, size_t * col) {
     size_t L = 0,
            R = len - 1,
            m;
+    *row = -1;
+    *col = -1;
     while (L <= R) {
         m = (L + R) / 2;
 
         if (lineno[L] < pos && (L == len - 1 || pos < lineno[L + 1])) {
-            return L;
+            *row = L;
+            break;
         } 
         if (pos < lineno[R] && (R == 0 || lineno[R - 1] < pos)) {
-            return R - 1;
+            *row =  R - 1;
+            break;
         }
 
         if (lineno[m] < pos) {
@@ -75,8 +80,12 @@ size_t get_lineno(position_t * lineno, size_t len, position_t pos) {
         } else if (lineno[m] > pos) {
             R = m - 1;
         } else {
-            return m;
+            *row = m;
+            break;
         }
     }
-    return -1;
+    
+    if (*row != -1) {
+        *col = pos - lineno[*row];
+    }
 }

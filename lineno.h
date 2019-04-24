@@ -9,6 +9,7 @@
 size_t read_lineno(char * fd, position_t ** lineno);
 
 // binary search for the line number of 
-size_t get_lineno(position_t * lineno, size_t len, position_t pos);
+void get_lineno(position_t * lineno, size_t len, position_t pos, 
+                size_t * row, size_t * col);
 
 #endif
