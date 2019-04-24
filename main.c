@@ -10,6 +10,11 @@
 #include "kgram.h"
 
 #define PRIME 105943
+#ifdef BGQ
+#include<hwi/include/bqc/A2_inlines.h>
+#else
+#define GetTimeBase MPI_Wtime            
+#endif
 //MPI Inits
 int mpi_commsize, mpi_myrank;
 //Arg inits
@@ -18,6 +23,10 @@ char** file_names;
 //Global vars
 int chars_per_chunk;
 int next_buffer_count; //This is the count for the carry-over from the next rank
+double g_time_in_secs = 0;
+double g_processor_frequency = 1600000000.0; // processing speed for BG/Q
+unsigned long long g_start_cycles=0;
+unsigned long long g_end_cycles=0;
 //Thread stuff
 int num_threads = 4;
 
@@ -102,6 +111,7 @@ int main(int argc, char** argv){
         //Generates fingerprints and hashes and store them in fingerprints
         pthread_t threads[num_threads];
         long chars_per_thread = chars_per_chunk / num_threads;
+        double start_time = GetTimeBase();
         for(int i = 0; i < num_threads; i++){
             //All the args to path to pthread are in this struct
             thread_args* arg = (thread_args*) malloc(sizeof(thread_args));
@@ -119,12 +129,16 @@ int main(int argc, char** argv){
             pthread_join(threads[j], &ret);
             free(ret);
         }
+        double end_time = GetTimeBase();
+        double kgram_hash_time = end_time - start_time;
+        printf("kgram_hash_time: %lf\n", kgram_hash_time);
         /****************************************************
          *  Multithreading for winnowing
          * **************************************************/
         //This is double pointer because it stores the pointer to the fingerprints in
         //unwinnowed_fingerprints
         //TODO: Switch this to an array of pointers
+        start_time = GetTimeBase();
         fingerprint_t** winnowed_fingerprints = (fingerprint_t**) calloc(chars_per_chunk, sizeof(fingerprint_t*));
         for(int i = 0; i < num_threads; i++){
             thread_args* arg = (thread_args*) malloc(sizeof(thread_args));
@@ -142,30 +156,31 @@ int main(int argc, char** argv){
             pthread_join(threads[j], &ret);
             free(ret);
         }
-
+        end_time = GetTimeBase();
+        double winnowing_time = end_time - start_time;
+        printf("winnow_time: %lf\n", winnowing_time);
         /****************************************************
          * adding fingerprint to DB and querying across ranks
          * **************************************************/
-        hash_t query[mpi_commsize];
-        for(int i = 0; i < chars_per_chunk - k_gram_size - 1; i++){
-            if(winnowed_fingerprints[i] == NULL){
-                continue;
-            }
-            MPI_Scatter(&winnowed_fingerprints[i]->hash, 1, MPI_INT, 
-                &query[mpi_myrank], 1, MPI_INT, mpi_myrank, MPI_COMM_WORLD);
-            location_list_t* locations_found;
-            int status = fingerprints_get(fingerprints_db, winnowed_fingerprints[i]->hash, &locations_found);
-            if(status == 1){
-                printf("Found hash %d at %d locations: \n", winnowed_fingerprints[i]->hash, locations_found->size);
-                location_node_t* curr = locations_found->head;
-                for(int i = 0; i < locations_found->size; i++){
-                    printf("Position: %ld, Src: %s\n", curr->location.pos, curr->location.source_file);
-                    curr = curr->next;
-                }
-            } else {
-                fingerprints_add(fingerprints_db, winnowed_fingerprints[i]->hash, winnowed_fingerprints[i]->location);
-            }
-        }
+        // fingerprint_t query[mpi_commsize];
+        // for(int i = 0; i < chars_per_chunk - k_gram_size - 1; i++){
+        //     if(winnowed_fingerprints[i] == NULL){
+        //         continue;
+        //     }
+        //     // MPI_Bcast(&query[mpi_myrank], 1, MPI
+        //     location_list_t* locations_found;
+        //     int status = fingerprints_get(fingerprints_db, winnowed_fingerprints[i]->hash, &locations_found);
+        //     if(status == 1){
+        //         printf("Found hash %d at %d locations: \n", winnowed_fingerprints[i]->hash, locations_found->size);
+        //         location_node_t* curr = locations_found->head;
+        //         for(int i = 0; i < locations_found->size; i++){
+        //             printf("Position: %ld, Src: %s\n", curr->location.pos, curr->location.source_file);
+        //             curr = curr->next;
+        //         }
+        //     } else {
+        //         fingerprints_add(fingerprints_db, winnowed_fingerprints[i]->hash, winnowed_fingerprints[i]->location);
+        //     }
+        // }
         free(local_chunk->buffer);
         free(unwinnowed_fingerprints);
     }
