@@ -141,7 +141,7 @@ int main(int argc, char** argv){
         }
         double end_time = GetTimeBase();
         double kgram_hash_time = end_time - start_time;
-        if (mpi_myrank) {
+        if (mpi_myrank == 0) {
             printf("kgram_hash_time: %lf\n", kgram_hash_time / g_processor_frequency);
         }
         /****************************************************
@@ -235,7 +235,7 @@ void* winnow(void* arg){
         if(min == r){
             // iteration complete; reset hashes
             min = 0;
-            for(int j = (r-1) % window_size; j != r; j = (j-1+window_size) % window_size){
+            for(int j = 0; j != window_size; j++){
                 if(h[j]->hash < h[min]->hash){
                     min = j;
                 }
