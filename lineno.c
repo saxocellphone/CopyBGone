@@ -62,6 +62,14 @@ size_t get_lineno(position_t * lineno, size_t len, position_t pos) {
            m;
     while (L <= R) {
         m = (L + R) / 2;
+
+        if (lineno[L] < pos && (L == len - 1 || pos < lineno[L + 1])) {
+            return L;
+        } 
+        if (pos < lineno[R] && (R == 0 || lineno[R - 1] < pos)) {
+            return R - 1;
+        }
+
         if (lineno[m] < pos) {
             L = m + 1;
         } else if (lineno[m] > pos) {
