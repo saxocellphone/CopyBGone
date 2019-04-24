@@ -1,6 +1,3 @@
-#ifndef GUARD_KGRAM_H
-#define GUARD_KGRAM_H
-
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -30,4 +27,3 @@ typedef struct _kgram_gen_t {
 void create_kgram_generator(kgram_gen_t** generator, char* source_file, char* base_text, long start_position, long end_position, int k);
 
 int generate_next_kgram(kgram_gen_t* generator, kgram_t** kgram_buffer);
-#endif

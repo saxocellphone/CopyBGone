@@ -18,7 +18,6 @@ void create_kgram_generator(kgram_gen_t** generator, char* source_file, char* ba
         position++;
     }
     (*generator)->position = position;
-    // printf("start_pos: %ld, char:%c\n", start_position, new_base_text[start_position]);
 }
 
 //Returns 1 if the generator reaches the end

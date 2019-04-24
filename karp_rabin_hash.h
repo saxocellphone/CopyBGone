@@ -1,8 +1,7 @@
 #include "fingerprints.h"
-#include "kgram.h"
 #include <stdio.h>
 
-#define ALPHA 26 //Number of characters in alphabet
+#define ALPHA 36 //Number of characters in alphabet
 /**
  * Karp-Rabin hash generator. Generates hash from a given k-gram.
  * */
@@ -12,7 +11,6 @@ typedef struct _hash_gen_t {
     int kgram_len;
     long prime;
     int h;
-    char* curr_kgram;
     hash_t curr_hash;
 } hash_gen_t;
 

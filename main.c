@@ -204,6 +204,7 @@ void* winnow(void* arg){
         h[r] = &fingerprints[i];
         int status = -1;
         if(min == r){
+            // iteration complete; reset hashes
             min = 0;
             for(int j = (r-1) % window_size; j != r; j = (j-1+window_size) % window_size){
                 if(h[j]->hash < h[min]->hash){
