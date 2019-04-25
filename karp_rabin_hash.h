@@ -12,6 +12,7 @@ typedef struct _hash_gen_t {
     long prime;
     int h;
     hash_t curr_hash;
+    char* curr_kgram;
 } hash_gen_t;
 
 hash_t create_hash_generator(hash_gen_t** generator, int k, long prime, char* first_kgram);
