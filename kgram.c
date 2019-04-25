@@ -13,7 +13,7 @@ void create_kgram_generator(kgram_gen_t** generator, char* source_file, char* ba
     (*generator)->start_position = start_position;
     (*generator)->end_position = end_position;
     (*generator)->k = k;
-    while(new_base_text[position] == 32 && position < end_position){
+    while(!isalnum(new_base_text[position]) && position < end_position){
         //For the first k-gram, skip until the first character is found,
         position++;
     }
@@ -25,7 +25,7 @@ int generate_next_kgram(kgram_gen_t* generator, kgram_t** kgram_buffer){
     // TODO: Make sure to free previous kgram before creating new ones.
     // Right now, you have to manually free it
     char* kgram_to_copy = &generator->base_text[generator->position];
-    if(kgram_to_copy[0] == 32){
+    if(!isalnum(kgram_to_copy[0])){
         //Skip spaces
         generator->position++;
         return 1;
@@ -42,7 +42,7 @@ int generate_next_kgram(kgram_gen_t* generator, kgram_t** kgram_buffer){
         int counter = 0;
         int buffer_index = 0;
         while(buffer_index < generator->k){
-            if(kgram_to_copy[counter] != 32){
+            if(isalnum(kgram_to_copy[counter])){
                 (*kgram_buffer)->kgram[buffer_index] = kgram_to_copy[counter];
                 buffer_index++;
             }

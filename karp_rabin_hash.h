@@ -1,5 +1,6 @@
 #include "fingerprints.h"
 #include <stdio.h>
+#include <ctype.h>
 
 #define ALPHA 36 //Number of characters in alphabet
 /**

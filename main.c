@@ -258,6 +258,7 @@ void* generate_fingerprint(void* arg){
     create_kgram_generator(&kgram_gen, ((thread_args*) arg)->file_name, ((thread_args*) arg)->text, ((thread_args*) arg)->start, ((thread_args*) arg)->finish, k_gram_size);
     kgram_t* first_kgram;
     generate_next_kgram(kgram_gen, &first_kgram);
+    printf("rank %d first kgram: %s\n", mpi_myrank, first_kgram->kgram);
     hash_gen_t* hash_gen;
     create_hash_generator(&hash_gen, k_gram_size, PRIME, first_kgram->kgram);
 

@@ -1,6 +1,9 @@
 #include "karp_rabin_hash.h"
 
 int int_pow(int base, int exp);
+int c2i(char c) {
+    return tolower(c) - 'a';
+}
 
 /**
  * Creates a generator of hashes for k-grams. 
@@ -18,7 +21,7 @@ hash_t create_hash_generator(hash_gen_t** generator, int k, long prime, char* fi
     hash_t first_hash = 0;
     //Generating the first k-gram
     for(int i = 0; i < k; i++){
-        first_hash += (first_kgram[i] - 'a' + 1) * int_pow(ALPHA, k - i - 1);
+        first_hash += (c2i(first_kgram[i]) + 1) * int_pow(ALPHA, k - i - 1);
     }
     (*generator)->curr_hash = first_hash;
     (*generator)->curr_kgram = first_kgram;
@@ -30,9 +33,9 @@ hash_t create_hash_generator(hash_gen_t** generator, int k, long prime, char* fi
  * */
 hash_t generate_next_hash(hash_gen_t* generator, char* new_kgram){
     //Using the current k-gram hash to generate the next k-gram hash
-    hash_t new_hash = generator->curr_hash - ((generator->curr_kgram[0] - 'a' + 1) * int_pow(ALPHA, generator->kgram_len -1));
+    hash_t new_hash = generator->curr_hash - ((c2i(generator->curr_kgram[0]) + 1) * int_pow(ALPHA, generator->kgram_len -1));
     new_hash *= ALPHA;
-    new_hash += new_kgram[generator->kgram_len-1] - 'a' + 1;
+    new_hash += c2i(new_kgram[generator->kgram_len-1]) + 1;
     // printf("curr_kgram: %s, new_kgram: %s, curr_hash: %d, new_hash: %d, thing: %d\n", generator->curr_kgram, new_kgram, generator->curr_hash, new_hash, ((generator->curr_kgram[0] - 'a' + 1) * int_pow(ALPHA, generator->kgram_len -1)));
     generator->curr_hash = new_hash;
     generator->curr_kgram = new_kgram;
